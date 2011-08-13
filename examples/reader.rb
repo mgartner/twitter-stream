@@ -9,7 +9,11 @@ EventMachine::run {
     :path    => '/1/statuses/filter.json',
     :auth    => 'LOGIN:PASSWORD',
     :method  => 'POST',
-    :content => 'track=basketball,football,baseball,footy,soccer'
+    :params => {
+      :track => 'basketball,football,baseball,footy,soccer',
+      :locations => '-122.75,36.8,-121.75,37.8,-74,40,-73,41',
+      :follow => '12,13,15,16,20,87'
+    }
   )
     
   stream.each_item do |item|
