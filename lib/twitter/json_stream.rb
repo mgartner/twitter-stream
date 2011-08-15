@@ -356,7 +356,7 @@ module Twitter
     end
 
     def escape str
-      CGI.escape(str.to_s)
+      URI.escape(str.to_s)
     end
   end
 end
