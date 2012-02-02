@@ -74,10 +74,6 @@ module Twitter
       @on_inited_callback = options.delete(:on_inited)
       @proxy = URI.parse(options[:proxy]) if options[:proxy]
       @last_data_received_at = nil
-
-      if filter = @options.delete(:filter)
-        @options[:params][:track] = filter.join(",")
-      end
     end
 
     def each_item &block
@@ -92,8 +88,6 @@ module Twitter
       @reconnect_callback = block
     end
 
-    # Called when no data has been received for NO_DATA_TIMEOUT seconds.
-    # Reconnecting is probably in order as per the Twitter recommendations
     def on_no_data &block
       @no_data_callback = block
     end
