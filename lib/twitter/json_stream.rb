@@ -29,8 +29,8 @@ module Twitter
       :content        => '',
       :path           => '/1/statuses/filter.json',
       :host           => 'stream.twitter.com',
-      :port           => 80,
-      :ssl            => false,
+      :port           => 443,
+      :ssl            => true,
       :user_agent     => 'TwitterStream',
       :timeout        => 0,
       :proxy          => ENV['HTTP_PROXY'],
@@ -228,7 +228,7 @@ module Twitter
           parse_stream_line(line)
         end
         @stream  = ''
-      rescue Exception => e
+      rescue => e
         receive_error("#{e.class}: " + [e.message, e.backtrace].flatten.join("\n\t"))
         close_connection
         return
@@ -268,7 +268,7 @@ module Twitter
       if @proxy && @proxy.user
         data << "Proxy-Authorization: Basic " + ["#{@proxy.user}:#{@proxy.password}"].pack('m').delete("\r\n")
       end
-      if @options[:method] == 'POST'
+      if ['POST', 'PUT'].include?(@options[:method])
         data << "Content-type: #{@options[:content_type]}"
         data << "Content-length: #{content.length}"
       end
@@ -331,7 +331,9 @@ module Twitter
         :token_secret => @options[:oauth][:access_secret]
       }
 
-      SimpleOAuth::Header.new(@options[:method], uri, params, oauth)
+      data = ['POST', 'PUT'].include?(@options[:method]) ? params : {}
+
+      SimpleOAuth::Header.new(@options[:method], uri, data, oauth)
     end
 
     # Scheme (https if ssl, http otherwise) and host part of URL

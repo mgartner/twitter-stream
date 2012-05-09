@@ -1,5 +1,4 @@
-$:.unshift "."
-require File.dirname(__FILE__) + '/../spec_helper.rb'
+require 'spec_helper.rb'
 require 'twitter/json_stream'
 
 include Twitter
@@ -24,7 +23,7 @@ describe JSONStream do
 
   context "authentication" do
     it "should connect with basic auth credentials" do
-      connect_stream :auth => "username:password"
+      connect_stream :auth => "username:password", :ssl => false
       $recieved_data.should include('Authorization: Basic')
     end
 
@@ -35,7 +34,7 @@ describe JSONStream do
         :access_key => 'ohai',
         :access_secret => 'ohno'
       }
-      connect_stream :oauth => oauth
+      connect_stream :oauth => oauth, :ssl => false
       $recieved_data.should include('Authorization: OAuth')
     end
   end
@@ -51,7 +50,7 @@ describe JSONStream do
     it "should define default properties" do
       EM.should_receive(:connect).with do |host, port, handler, opts|
         host.should == 'stream.twitter.com'
-        port.should == 80
+        port.should == 443
         opts[:path].should == '/1/statuses/filter.json'
         opts[:method].should == 'GET'
       end
@@ -63,7 +62,7 @@ describe JSONStream do
         host.should == 'my-proxy'
         port.should == 8080
         opts[:host].should == 'stream.twitter.com'
-        opts[:port].should == 80
+        opts[:port].should == 443
         opts[:proxy].should == 'http://my-proxy:8080'
       end
       stream = JSONStream.connect(:proxy => "http://my-proxy:8080") {}
@@ -83,46 +82,46 @@ describe JSONStream do
     before :each do
       $body = File.readlines(fixture_path("twitter/tweets.txt"))
       $body.each {|tweet| tweet.strip!; tweet << "\r" }
-      $data_to_send = http_response(200,"OK",{},$body)
+      $data_to_send = http_response(200, "OK", {}, $body)
       $recieved_data = ''
       $close_connection = false
     end
 
     it "should add no params" do
-      connect_stream
+      connect_stream :ssl => false
       $recieved_data.should include('/1/statuses/filter.json HTTP')
     end
 
     it "should add custom params" do
-      connect_stream :params => {:name => 'test'}
+      connect_stream :params => {:name => 'test'},  :ssl => false
       $recieved_data.should include('?name=test')
     end
 
     it "should parse headers" do
-      connect_stream
+      connect_stream :ssl => false
       stream.code.should == 200
       stream.headers.keys.map{|k| k.downcase}.should include('content-type')
     end
 
     it "should parse headers even after connection close" do
-      connect_stream
+      connect_stream :ssl => false
       stream.code.should == 200
       stream.headers.keys.map{|k| k.downcase}.should include('content-type')
     end
 
     it "should extract records" do
-      connect_stream :user_agent => 'TEST_USER_AGENT'
+      connect_stream :user_agent => 'TEST_USER_AGENT',  :ssl => false
       $recieved_data.upcase.should include('USER-AGENT: TEST_USER_AGENT')
     end
 
     it 'should allow custom headers' do
-      connect_stream :headers => { 'From' => 'twitter-stream' }
+      connect_stream :headers => { 'From' => 'twitter-stream' },  :ssl => false
       $recieved_data.upcase.should include('FROM: TWITTER-STREAM')
     end
 
     it "should deliver each item" do
       items = []
-      connect_stream do
+      connect_stream :ssl => false do
         stream.each_item do |item|
           items << item
         end
@@ -133,6 +132,23 @@ describe JSONStream do
       tweets.each_with_index do |tweet,i|
         items[i].should == tweet
       end
+    end
+
+    it "should swallow StandardError exceptions when delivering items" do
+      expect do
+        connect_stream :ssl => false do
+          stream.each_item { |item| raise StandardError, 'error message' }
+        end
+      end.to_not raise_error
+    end
+
+
+    it "propagates out runtime errors when delivering items" do
+      expect do
+        connect_stream :ssl => false do
+          stream.each_item { |item| raise Exception, 'error message' }
+        end
+      end.to raise_error(Exception, 'error message')
     end
 
     it "should send correct user agent" do
@@ -254,26 +270,26 @@ describe JSONStream do
     end
 
     it "should reconnect on application failure 10 at base" do
-      connect_stream do
+      connect_stream :ssl => false do
         stream.should_receive(:reconnect_after).with(10)
       end
     end
 
     it "should not reconnect on application failure 10 at base when not configured to auto reconnect" do
-      connect_stream(:auto_reconnect => false) do
+      connect_stream  :ssl => false, :auto_reconnect => false do
         stream.should_receive(:reconnect_after).never
       end
     end
 
     it "should reconnect with exponential timeout" do
-      connect_stream do
+      connect_stream :ssl => false do
         stream.af_last_reconnect = 160
         stream.should_receive(:reconnect_after).with(320)
       end
     end
 
     it "should not try to reconnect after limit is reached" do
-      connect_stream do
+      connect_stream :ssl => false do
         stream.af_last_reconnect = 320
         stream.should_not_receive(:reconnect_after)
       end
@@ -291,7 +307,7 @@ describe JSONStream do
       body_chunks = ["{\"screen"+"_name\"",":\"user1\"}\r\r\r{","\"id\":9876}\r\r"]
       $data_to_send = http_response(200,"OK",{},body_chunks)
       items = []
-      connect_stream do
+      connect_stream :ssl => false do
         stream.each_item do |item|
           items << item
         end
@@ -305,7 +321,7 @@ describe JSONStream do
       body_chunks = ["{\"id\"",":1234}\r{","\"id\":9876}"]
       $data_to_send = http_response(200,"OK",{},body_chunks)
       items = []
-      connect_stream do
+      connect_stream :ssl => false do
         stream.each_item do |item|
           items << item
         end
