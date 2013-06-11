@@ -26,7 +26,6 @@ module Twitter
       :method         => 'GET',
       :path           => '/',
       :content_type   => "application/x-www-form-urlencoded",
-      :content        => '',
       :path           => '/1/statuses/filter.json',
       :host           => 'stream.twitter.com',
       :port           => 443,
@@ -36,7 +35,6 @@ module Twitter
       :proxy          => ENV['HTTP_PROXY'],
       :auth           => nil,
       :oauth          => {},
-      :filters        => [],
       :params         => {},
       :auto_reconnect => true
     }
@@ -76,6 +74,10 @@ module Twitter
       @on_inited_callback = options.delete(:on_inited)
       @proxy = URI.parse(options[:proxy]) if options[:proxy]
       @last_data_received_at = nil
+
+      if filter = @options.delete(:filter)
+        @options[:params][:track] = filter.join(",")
+      end
     end
 
     def each_item &block
@@ -244,7 +246,7 @@ module Twitter
         request_uri = "#{uri_base}:#{@options[:port]}#{request_uri}"
       end
 
-      content = @options[:content]
+      content = ''
 
       unless (q = query).empty?
         if @options[:method].to_s.upcase == 'GET'
@@ -344,13 +346,7 @@ module Twitter
     # Normalized query hash of escaped string keys and escaped string values
     # nil values are skipped
     def params
-      flat = {}
-      @options[:params].merge( :track => @options[:filters] ).each do |param, val|
-        next if val.to_s.empty? || (val.respond_to?(:empty?) && val.empty?)
-        val = val.join(",") if val.respond_to?(:join)
-        flat[param.to_s] = val.to_s
-      end
-      flat
+      @options[:params]
     end
 
     def query
@@ -358,7 +354,7 @@ module Twitter
     end
 
     def escape str
-      URI.escape(str.to_s, /[^a-zA-Z0-9\-\.\_\~]/)
+      URI.escape(str.to_s)
     end
   end
 end
