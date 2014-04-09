@@ -238,12 +238,26 @@ describe JSONStream do
     end
 
     it "should call no data callback after no data received for 90 seconds" do
-      connect_stream :stop_in => 6 do
+      connect_stream(stop_in: 6, ssl: false) do
         stream.last_data_received_at = Time.now - 88
         stream.should_receive(:no_data).once
       end
     end
 
+  end
+
+  context "on empty data received" do
+    attr_reader :stream
+    before :each do
+      $data_to_send = "\n\r"
+      $close_connection = false
+    end
+    it "should call no data callback after empty data received for 90 seconds" do
+      connect_stream(stop_in: 6, ssl: false) do
+        stream.last_data_received_at = Time.now - 88
+        stream.should_receive(:no_data).once
+      end
+    end
   end
 
   context "on server unavailable" do
