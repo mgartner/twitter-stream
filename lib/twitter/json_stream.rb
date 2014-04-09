@@ -123,7 +123,7 @@ module Twitter
     # Receives raw data from the HTTP connection and pushes it into the
     # HTTP parser which then drives subsequent callbacks.
     def receive_data(data)
-      @last_data_received_at = Time.now
+      @last_data_received_at = Time.now if !data.strip.empty?
       @parser << data
     end
 
